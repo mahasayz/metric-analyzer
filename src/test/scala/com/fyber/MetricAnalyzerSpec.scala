@@ -1,13 +1,12 @@
 package com.fyber
 
-import java.io.FileNotFoundException
+import java.io.{File, FileNotFoundException}
 
 import com.fyber.core.MetricAnalyzer
 import com.fyber.model.{Analysis, Metric}
 import org.scalatest.{FlatSpec, Matchers}
 
 import scala.collection.mutable.ListBuffer
-import scala.util.{Failure, Success, Try}
 
 /**
   * Created by Mahbub on 1/22/2017.
@@ -33,12 +32,10 @@ trait AnalyzerBehaviors {this: FlatSpec =>
     }
 
     it should "print results" in {
-      Try(analyzer.timed(analyzer.analyzeData(analyzer.filename){ analysis =>
+      analyzer.printHeader
+      analyzer.timed(analyzer.analyzeData(analyzer.filename){ analysis =>
         analyzer.printLine(analysis)
-      })) match {
-        case Success(v) => // no problems
-        case Failure(e) => fail("Got an exception while printing")
-      }
+      })
       analyzer.resetQueue
     }
 
@@ -91,7 +88,7 @@ class MetricAnalyzerSpec extends FlatSpec with Matchers with AnalyzerBehaviors {
     )
   }
 
-  def metricsFromFile = new TestAnalyzer("C:\\Users\\Mahbub\\Documents\\metric-analyzer\\src\\test\\resources\\test_data_scala.txt") {
+  def metricsFromFile = new TestAnalyzer(getClass.getResource("/test_data_scala.txt").getPath) {
     override def expectedAnalysis: List[Analysis] = List(
       Analysis(Metric(1355270609,1.80215),1,1.80215,1.80215,1.80215),
       Analysis(Metric(1355270621,1.80185),2,3.604,1.80185,1.80215),
@@ -116,7 +113,14 @@ class MetricAnalyzerSpec extends FlatSpec with Matchers with AnalyzerBehaviors {
     )
   }
 
-  def metricsFromInvalidFile = new TestAnalyzer("bad_dir/bad_file.txt") {
+  def fileWithInvalidMetric = new TestAnalyzer(getClass.getResource("/faulty_data_scala.txt").getPath) {
+    override def expectedAnalysis: List[Analysis] = List(
+      Analysis(Metric(1355270609,1.80215),1,1.80215,1.80215,1.80215),
+      Analysis(Metric(1355270621,1.80185),2,3.604,1.80185,1.80215)
+    )
+  }
+
+  def metricsFromInvalidFile = new TestAnalyzer("bad_file.txt") {
     override def expectedAnalysis: List[Analysis] = List()
   }
 
@@ -128,9 +132,11 @@ class MetricAnalyzerSpec extends FlatSpec with Matchers with AnalyzerBehaviors {
 
   "An analyzer with metrics read from file" should behave like sixtySecAnalyzer(metricsFromFile)
 
+  "An analyzer with faulty metric read from file" should behave like sixtySecAnalyzer(fileWithInvalidMetric)
+
   "An analyzer" should "throw FileNotFoundException if invalid file-name specified" in {
     a [FileNotFoundException] should be thrownBy {
-      metricsFromInvalidFile.readData("bad_dir/file.txt"){ line =>
+      metricsFromInvalidFile.readData(metricsFromInvalidFile.filename){ line =>
         val tokens = line.split("\t")
         Metric(tokens(0).toLong, tokens(1).toDouble)
       }
