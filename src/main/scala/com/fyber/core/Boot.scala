@@ -3,10 +3,18 @@ package com.fyber.core
 /**
   * Created by Mahbub on 1/22/2017.
   */
-object Boot extends App with MetricAnalyzer {
+
+class BasicMetricAnalyzer(val window: Int) extends MetricAnalyzer {}
+
+object Boot extends App {
   override def main(args: Array[String]) = {
     if (args.length != 1)
       throw new IllegalArgumentException("Usage: scala Boot <file-name>")
-    analyzeData(args(0))
+
+    val analyzer = new BasicMetricAnalyzer(60)
+
+    analyzer.analyzeData(args(0)){ metric =>
+      analyzer.printLine(metric)
+    }
   }
 }
